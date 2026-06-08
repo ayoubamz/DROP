@@ -5,96 +5,355 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drop & Go | Live Share</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #121212; color: #fff; text-align: center; padding: 50px 15px; margin: 0; -webkit-text-size-adjust: 100%; }
-        .box { background: #1e1e1e; padding: 30px 20px; border-radius: 12px; max-width: 450px; margin: auto; box-shadow: 0 4px 15px rgba(0,0,0,0.4); box-sizing: border-box; }
-        button { background: #00adb5; color: white; border: none; padding: 12px 20px; min-height: 48px; font-size: 16px; border-radius: 6px; cursor: pointer; margin: 10px 0; width: 100%; font-weight: bold; transition: background 0.2s, transform 0.1s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            background: #121212;
+            color: #fff;
+            text-align: center;
+            padding: 50px 15px;
+            margin: 0;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        .box {
+            background: #1e1e1e;
+            padding: 30px 20px;
+            border-radius: 12px;
+            max-width: 450px;
+            margin: auto;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+        }
+
+        button {
+            background: #00adb5;
+            color: #fff;
+            border: 0;
+            padding: 12px 20px;
+            min-height: 48px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px 0;
+            width: 100%;
+            font-weight: 700;
+            transition: background 0.2s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         button:hover { background: #00cac7; }
         button:active { transform: scale(0.98); }
-        input[type="number"], textarea { width: 100%; padding: 12px; margin: 10px 0; background: #2d2d2d; border: 1px solid #444; color: #fff; border-radius: 6px; text-align: center; box-sizing: border-box; font-size: 16px; }
-        textarea { text-align: left; resize: vertical; }
+
+        .secondary-button { background: #393e46; }
+        .secondary-button:hover { background: #4a505a; }
+        .danger-button { background: #ff2e63; }
+        .danger-button:hover { background: #ff4778; }
+
+        input[type="number"],
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            background: #2d2d2d;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 16px;
+        }
+
+        textarea {
+            text-align: left;
+            resize: vertical;
+        }
+
         .hidden { display: none !important; }
-        .code-display { font-size: 38px; font-weight: bold; color: #00adb5; letter-spacing: 6px; margin: 15px 0; }
-        .or-divider { margin: 15px 0; color: #666; font-size: 14px; font-weight: bold; }
-        
-        /* منطقة السحب التراكمية الحية */
-        .drop-zone { display: block; border: 2px dashed #444; padding: 35px 20px; border-radius: 8px; background: #1a1a1a; cursor: pointer; margin: 15px 0; transition: all 0.3s ease; touch-action: manipulation; -webkit-tap-highlight-color: transparent; user-select: none; box-sizing: border-box; }
-        .drop-zone.drag-over { border-color: #00adb5; background: rgba(0, 173, 181, 0.12); transform: scale(1.01); }
-        .drop-zone p { margin: 5px 0; font-size: 14px; color: #aaa; }
-        .drop-zone:active { border-color: #00adb5; background: rgba(0, 173, 181, 0.08); }
-        .file-input-native { position: fixed; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
-        
-        /* حاوية قائمة الملفات المرتبة */
-        .file-list { margin: 15px 0; text-align: left; background: #252d3a; padding: 12px; border-radius: 6px; max-height: 220px; overflow-y: auto; box-sizing: border-box; }
-        .file-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; font-size: 14px; }
-        .file-item:last-child { border-bottom: none; }
-        
-        .error-msg { color: #ff2e63; font-size: 13px; margin: 8px 0; font-weight: bold; }
-        .download-box { background: #2d2d2d; border: 1px dashed #00adb5; padding: 15px; border-radius: 6px; margin-top: 20px; text-align: left; }
-        .footer-credit { margin-top: 24px; padding-top: 18px; border-top: 1px solid #333; color: #aaa; font-size: 13px; }
-        .footer-credit p { margin: 0 0 12px 0; }
-        .footer-links { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
-        .footer-link { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 40px; padding: 0 12px; border-radius: 6px; background: #2d2d2d; color: #fff; text-decoration: none; font-size: 13px; font-weight: 700; transition: background 0.2s, transform 0.1s; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+        .code-display {
+            font-size: 38px;
+            font-weight: 700;
+            color: #00adb5;
+            letter-spacing: 6px;
+            margin: 15px 0;
+        }
+
+        .or-divider {
+            margin: 15px 0;
+            color: #666;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .muted {
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .app-title { font-size: 1.5em; }
+        .app-subtitle { margin-top: -5px; }
+
+        .divider-line {
+            border: 0;
+            border-top: 1px solid #333;
+            margin: 20px 0;
+        }
+
+        .room-label {
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+
+        .staged-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 14px;
+            text-align: left;
+            font-weight: 500;
+        }
+
+        .files-counter-label {
+            color: #00adb5;
+            font-weight: 700;
+            margin-left: 2px;
+        }
+
+        .drop-zone {
+            display: block;
+            border: 2px dashed #444;
+            padding: 35px 20px;
+            border-radius: 8px;
+            background: #1a1a1a;
+            cursor: pointer;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #00adb5;
+            background: rgba(0, 173, 181, 0.12);
+            transform: scale(1.01);
+        }
+
+        .drop-zone:active {
+            border-color: #00adb5;
+            background: rgba(0, 173, 181, 0.08);
+        }
+
+        .drop-zone p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        .drop-icon { font-size: 32px; }
+
+        .drop-title {
+            font-weight: 700;
+            color: #fff;
+            margin: 8px 0 4px;
+        }
+
+        .drop-help {
+            font-size: 12px;
+            color: #666;
+            margin: 0;
+        }
+
+        .file-input-native {
+            position: fixed;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .file-list {
+            margin: 15px 0;
+            text-align: left;
+            background: #252d3a;
+            padding: 12px;
+            border-radius: 6px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #333;
+            font-size: 14px;
+        }
+
+        .file-item span:first-child {
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .file-item:last-child { border-bottom: 0; }
+
+        .remove-file-button {
+            width: 36px;
+            min-height: 36px;
+            margin: 0;
+            padding: 0;
+            background: transparent;
+            color: #ff2e63;
+            flex: 0 0 auto;
+            font-size: 18px;
+        }
+
+        .remove-file-button:hover { background: rgba(255, 46, 99, 0.12); }
+
+        .error-msg {
+            color: #ff2e63;
+            font-size: 13px;
+            margin: 8px 0;
+            font-weight: 700;
+        }
+
+        .download-box {
+            background: #2d2d2d;
+            border: 1px dashed #00adb5;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            text-align: left;
+        }
+
+        .download-title {
+            margin: 0 0 10px;
+            color: #00adb5;
+            font-weight: 700;
+        }
+
+        .download-row { margin: 8px 0; }
+
+        .download-row a {
+            color: #fff;
+            text-decoration: underline;
+            font-size: 14px;
+            display: inline-block;
+            overflow-wrap: anywhere;
+        }
+
+        .footer-credit {
+            margin-top: 24px;
+            padding-top: 18px;
+            border-top: 1px solid #333;
+            color: #aaa;
+            font-size: 13px;
+        }
+
+        .footer-credit p { margin: 0 0 12px; }
+
+        .footer-links {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .footer-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            min-height: 40px;
+            padding: 0 12px;
+            border-radius: 6px;
+            background: #2d2d2d;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 700;
+            transition: background 0.2s, transform 0.1s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
         .footer-link:hover { background: #393e46; }
         .footer-link:active { transform: scale(0.98); }
-        .footer-link svg { width: 18px; height: 18px; fill: currentColor; flex: 0 0 auto; }
+
+        .footer-link svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            flex: 0 0 auto;
+        }
+
         .linkedin-link { color: #8fd7ff; }
         .coffee-link { color: #ffd166; }
+
         @media (max-width: 520px) {
             body { padding: 18px 10px; }
             .box { padding: 22px 14px; }
             .drop-zone { padding: 28px 14px; }
-            .code-display { font-size: 32px; letter-spacing: 4px; }
-            .file-item { align-items: flex-start; gap: 10px; }
+            .code-display {
+                font-size: 32px;
+                letter-spacing: 4px;
+            }
+            .file-item {
+                align-items: flex-start;
+                gap: 10px;
+            }
             .file-item span:first-child { overflow-wrap: anywhere; }
         }
     </style>
 </head>
 <body>
+    <main class="box">
+        <h1 class="app-title">Drop & Go 🚀</h1>
+        <p class="muted app-subtitle">In-memory, live peer sharing. Zero traces.</p>
+        <hr class="divider-line">
 
-    <div class="box">
-        <h2>Drop & Go 🚀</h2>
-        <p style="color: #aaa; font-size: 14px; margin-top: -5px;">In-memory, live peer sharing. Zero traces.</p>
-        <hr style="border-color: #333; margin: 20px 0;">
-
-        <div id="start-screen">
-            <button onclick="createRoom()">Create New Room</button>
+        <section id="start-screen" aria-label="Start">
+            <button type="button" onclick="createRoom()">Create New Room</button>
             <div class="or-divider">— OR —</div>
-            <p style="margin-bottom: 5px; color: #ccc;">Enter existing room code:</p>
-            <input type="number" id="room-input" placeholder="4-Digit Code">
-            <button onclick="joinRoom()" style="background: #393e46;">Connect to Room</button>
-        </div>
+            <label class="room-label" for="room-input">Enter existing room code:</label>
+            <input type="text" id="room-input" placeholder="4-Digit Code" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="one-time-code">
+            <button type="button" class="secondary-button" onclick="joinRoom()">Connect to Room</button>
+        </section>
 
-        <div id="share-screen" class="hidden">
-            <p style="margin-bottom: 2px; color: #aaa; font-size: 14px;">Your Room Code:</p>
+        <section id="share-screen" class="hidden" aria-label="Share">
+            <p class="muted">Your Room Code:</p>
             <div id="display-code" class="code-display">----</div>
-            
+
             <textarea id="clipboard-area" rows="4" placeholder="Type or paste text/links here..."></textarea>
             <div id="text-error" class="error-msg hidden">⚠️ Text payload exceeds the 5MB limit!</div>
-            
-            <hr style="border-color: #333; margin: 15px 0;">
-            
-            <label style="display:block; margin-bottom:8px; color:#aaa; font-size:14px; text-align: left; font-weight: 500;">
-                Staged Files <span id="files-counter-label" style="color: #00adb5; font-weight: bold; margin-left: 2px;">(max: 6 files at a time)</span>:
+
+            <hr class="divider-line">
+
+            <label class="staged-label" for="file-input">
+                Staged Files <span id="files-counter-label" class="files-counter-label">(max: 6 files at a time)</span>:
             </label>
 
-            <input type="file" id="file-input" class="file-input-native" multiple>
+            <input type="file" id="file-input" class="file-input-native" multiple aria-describedby="drop-zone-help">
             <label id="drop-zone" class="drop-zone" for="file-input" role="button" tabindex="0">
-                <span style="font-size: 32px;">📁</span>
-                <p style="font-weight: bold; color: #fff; margin: 8px 0 4px 0;">Drag & Drop files here</p>
-                <p style="font-size: 12px; color: #666; margin: 0;">or tap to open file selector (Max 20MB total)</p>
+                <span class="drop-icon" aria-hidden="true">📁</span>
+                <p class="drop-title">Drag & Drop files here</p>
+                <p id="drop-zone-help" class="drop-help">or tap to open file selector (Max 20MB total)</p>
             </label>
-            
+
             <div id="file-error" class="error-msg hidden"></div>
-            
             <div id="selected-files-list" class="file-list hidden"></div>
-            
-            <button id="upload-btn" onclick="sendFiles()" style="background: #00adb5; display: none;">Send Files 📤</button>
-            
+
+            <button type="button" id="upload-btn" onclick="sendFiles()" style="display: none;">Send Files 📤</button>
+
             <div id="file-download-area"></div>
-            
+
             <br>
-            <button onclick="destroyRoom()" style="background: #ff2e63;">Destroy Room & Exit 💥</button>
-        </div>
+            <button type="button" class="danger-button" onclick="destroyRoom()">Destroy Room & Exit 💥</button>
+        </section>
 
         <footer class="footer-credit">
             <p>Made by Ayoub</p>
@@ -105,15 +364,16 @@
                     </svg>
                     LinkedIn
                 </a>
-                <a class="footer-link coffee-link" href="https://www.buymeacoffee.com/" target="_blank" rel="noopener noreferrer" aria-label="Buy me a coffee">
+
+                <a class="footer-link coffee-link" href="https://ko-fi.com/ayoubamz" target="_blank" rel="noopener noreferrer" aria-label="Support Ayoub on Ko-fi">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M4 4h13a3 3 0 0 1 0 6h-.2l-.55 3.86A5.98 5.98 0 0 1 10.32 19H9.68a5.98 5.98 0 0 1-5.93-5.14L2.61 5.14A1 1 0 0 1 3.6 4H4zm13 4a1 1 0 0 0 0-2h-.29l-.29 2H17zM4.74 6l1 7.58A3.99 3.99 0 0 0 9.68 17h.64a3.99 3.99 0 0 0 3.94-3.42L15.26 6H4.74zM3 21a1 1 0 0 1 1-1h13a1 1 0 1 1 0 2H4a1 1 0 0 1-1-1z"/>
                     </svg>
-                    Buy me a coffee
+                    Ko-fi
                 </a>
             </div>
         </footer>
-    </div>
+    </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>

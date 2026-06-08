@@ -1,7 +1,13 @@
 const socket = io();
-let currentRoomCode = null;
 
-// استدعاء عناصر الواجهة
+const MAX_TEXT_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILES_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
+const MAX_FILES_COUNT = 6;
+
+let currentRoomCode = null;
+let selectedFiles = [];
+let dragAndDropReady = false;
+
 const startScreen = document.getElementById('start-screen');
 const shareScreen = document.getElementById('share-screen');
 const displayCode = document.getElementById('display-code');
@@ -14,126 +20,92 @@ const selectedFilesList = document.getElementById('selected-files-list');
 const uploadBtn = document.getElementById('upload-btn');
 const fileDownloadArea = document.getElementById('file-download-area');
 const roomInput = document.getElementById('room-input');
+const filesCounterLabel = document.getElementById('files-counter-label');
 
-// الثوابت والقيود
-const MAX_TEXT_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_FILES_TOTAL_SIZE = 20 * 1024 * 1024; // 20MB
-const MAX_FILES_COUNT = 6; 
+function createRoom() {
+    socket.emit('create-room');
+}
 
-// المخزن التراكمي المستقر في الرام
-let ALL_SELECTED_FILES = [];
-let dragAndDropReady = false;
-
-fileInput.addEventListener('change', handleInstantFileSelection);
-dropZone.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
-        fileInput.click();
+function joinRoom() {
+    const code = roomInput.value.trim();
+    if (!/^\d{4}$/.test(code)) {
+        alert('Please enter a valid 4-digit room code.');
+        return;
     }
-});
-roomInput.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-        joinRoom();
-    }
-});
 
-// إدارة اتصال الغرف
-function createRoom() { socket.emit('create-room'); }
-socket.on('room-created', (code) => { currentRoomCode = code; displayCode.innerText = code; switchToShareScreen(); });
-function joinRoom() { const code = document.getElementById('room-input').value; if(code) socket.emit('join-room', code); }
-socket.on('joined-success', (code) => { currentRoomCode = code; displayCode.innerText = code; switchToShareScreen(); });
+    socket.emit('join-room', code);
+}
 
 function switchToShareScreen() {
     startScreen.classList.add('hidden');
     shareScreen.classList.remove('hidden');
-    
-    // 🛡️ تأمين وحماية متصفحات الهواتف من الانهيار الصامت
-    try {
-        setupDragAndDrop(); 
-    } catch (e) {
-        console.log("Drag and Drop not supported on this device, skipping smoothly.");
-    }
+    setupDragAndDrop();
 }
 
-// 1. مزامنة النصوص الحية (تأكد أنها ستعود للعمل كالبرق)
-clipboardArea.addEventListener('input', () => {
-    const text = clipboardArea.value;
-    if (new Blob([text]).size > MAX_TEXT_SIZE) { textError.classList.remove('hidden'); return; }
-    textError.classList.add('hidden');
-    
-    if (currentRoomCode) {
-        socket.emit('send-data', { roomCode: currentRoomCode, payload: { type: 'text', value: text } });
-    }
-});
-
-// تحفيز ضغط حقل الملفات برمجياً عند لمس المربع
-function triggerFileInput() { fileInput.click(); }
-
-// 2. معالجة اختيار ملفات الهاتف والتصفح التقليدي
 function handleInstantFileSelection() {
     if (fileInput.files && fileInput.files.length > 0) {
         addFilesToQueue(fileInput.files);
     }
-    fileInput.value = ''; // تصفير للسماح بإعادة الاختيار الفريش
+
+    fileInput.value = '';
 }
 
-// 3. معالجة أحداث السحب والإفلات للحواسب مع فحص الدعم
 function setupDragAndDrop() {
     if (!dropZone || dragAndDropReady) return;
+
     dragAndDropReady = true;
 
-    ['dragenter', 'dragover'].forEach(eventName => {
-        dropZone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+    ['dragenter', 'dragover'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             dropZone.classList.add('drag-over');
-        }, false);
+        });
     });
 
-    ['dragleave', 'drop'].forEach(eventName => {
-        dropZone.addEventListener(eventName, (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+    ['dragleave', 'drop'].forEach((eventName) => {
+        dropZone.addEventListener(eventName, (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             dropZone.classList.remove('drag-over');
-        }, false);
+        });
     });
 
-    dropZone.addEventListener('drop', (e) => {
-        const dt = e.dataTransfer;
-        if (dt && dt.files) {
-            addFilesToQueue(dt.files);
-        }
-    }, false);
+    dropZone.addEventListener('drop', (event) => {
+        const files = event.dataTransfer && event.dataTransfer.files;
+        if (files) addFilesToQueue(files);
+    });
 }
 
-// 4. دمج الملفات وفحص منع التكرار
 function addFilesToQueue(files) {
     fileError.classList.add('hidden');
     if (!files || files.length === 0) return;
 
-    for (let i = 0; i < files.length; i++) {
-        const isDuplicate = ALL_SELECTED_FILES.some(f => f.name === files[i].name && f.size === files[i].size);
-        if (!isDuplicate) {
-            ALL_SELECTED_FILES.push(files[i]);
-        }
-    }
+    Array.from(files).forEach((file) => {
+        const isDuplicate = selectedFiles.some((existingFile) => (
+            existingFile.name === file.name &&
+            existingFile.size === file.size &&
+            existingFile.lastModified === file.lastModified
+        ));
+
+        if (!isDuplicate) selectedFiles.push(file);
+    });
+
     updateFilesListUI();
 }
 
-// 5. تحديث الواجهة والعداد وحقن زر الـ ❌
 function updateFilesListUI() {
-    selectedFilesList.innerHTML = ''; 
-    const counterLabel = document.getElementById('files-counter-label');
-    
-    if (ALL_SELECTED_FILES.length > 0) {
-        counterLabel.innerText = `(Current: ${ALL_SELECTED_FILES.length} / max: 6)`;
-        counterLabel.style.color = (ALL_SELECTED_FILES.length > MAX_FILES_COUNT) ? '#ff2e63' : '#00adb5';
+    selectedFilesList.textContent = '';
+
+    if (selectedFiles.length > 0) {
+        filesCounterLabel.textContent = `(Current: ${selectedFiles.length} / max: ${MAX_FILES_COUNT})`;
+        filesCounterLabel.style.color = selectedFiles.length > MAX_FILES_COUNT ? '#ff2e63' : '#00adb5';
     } else {
-        counterLabel.innerText = '(max: 6 files at a time)';
-        counterLabel.style.color = '#00adb5';
+        filesCounterLabel.textContent = `(max: ${MAX_FILES_COUNT} files at a time)`;
+        filesCounterLabel.style.color = '#00adb5';
     }
 
-    if (ALL_SELECTED_FILES.length === 0) {
+    if (selectedFiles.length === 0) {
         selectedFilesList.classList.add('hidden');
         uploadBtn.style.display = 'none';
         fileError.classList.add('hidden');
@@ -141,98 +113,180 @@ function updateFilesListUI() {
     }
 
     selectedFilesList.classList.remove('hidden');
-    let totalSize = 0;
 
-    ALL_SELECTED_FILES.forEach((file, index) => {
-        totalSize += file.size;
-        const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-        
+    const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+
+    selectedFiles.forEach((file, index) => {
         const item = document.createElement('div');
+        const fileDetails = document.createElement('span');
+        const removeButton = document.createElement('button');
+        const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+
         item.className = 'file-item';
-        item.innerHTML = `
-            <span>📄 ${index + 1}. ${file.name} (${sizeInMB} MB)</span> 
-            <span onclick="event.stopPropagation(); removeFileFromQueue(${index});" style="color:#ff2e63; cursor:pointer; font-weight:bold; padding:0 8px;">❌</span>
-        `;
+        fileDetails.textContent = `📄 ${index + 1}. ${file.name} (${sizeInMB} MB)`;
+
+        removeButton.type = 'button';
+        removeButton.className = 'remove-file-button';
+        removeButton.textContent = '✕';
+        removeButton.setAttribute('aria-label', `Remove ${file.name}`);
+        removeButton.addEventListener('click', (event) => {
+            event.stopPropagation();
+            removeFileFromQueue(index);
+        });
+
+        item.append(fileDetails, removeButton);
         selectedFilesList.appendChild(item);
     });
 
-    const isCountValid = (ALL_SELECTED_FILES.length >= 1 && ALL_SELECTED_FILES.length <= MAX_FILES_COUNT);
-    const isSizeValid = (totalSize <= MAX_FILES_TOTAL_SIZE);
-
-    if (ALL_SELECTED_FILES.length > MAX_FILES_COUNT) {
-        fileError.innerText = `⚠️ Limit exceeded! Max 6 files. Please remove ${ALL_SELECTED_FILES.length - MAX_FILES_COUNT} file(s).`;
+    if (selectedFiles.length > MAX_FILES_COUNT) {
+        fileError.textContent = `⚠️ Limit exceeded! Max ${MAX_FILES_COUNT} files. Please remove ${selectedFiles.length - MAX_FILES_COUNT} file(s).`;
         fileError.classList.remove('hidden');
     } else if (totalSize > MAX_FILES_TOTAL_SIZE) {
-        fileError.innerText = `⚠️ Total size (${(totalSize / (1024 * 1024)).toFixed(2)} MB) exceeds 20MB limit!`;
+        fileError.textContent = `⚠️ Total size (${(totalSize / (1024 * 1024)).toFixed(2)} MB) exceeds 20MB limit!`;
         fileError.classList.remove('hidden');
     } else {
         fileError.classList.add('hidden');
     }
 
-    if (isCountValid && isSizeValid) {
-        uploadBtn.style.display = 'block';
-    } else {
-        uploadBtn.style.display = 'none';
-    }
+    const isCountValid = selectedFiles.length >= 1 && selectedFiles.length <= MAX_FILES_COUNT;
+    const isSizeValid = totalSize <= MAX_FILES_TOTAL_SIZE;
+    uploadBtn.style.display = isCountValid && isSizeValid ? 'block' : 'none';
 }
 
-// 6. حذف ملف محدد بـ ❌ وعزل الحدث لمنع فتح نافذة الهاتف مجدداً
 function removeFileFromQueue(index) {
-    ALL_SELECTED_FILES.splice(index, 1);
+    selectedFiles.splice(index, 1);
     updateFilesListUI();
 }
 
-// 7. البث الذري الموحد وتطهير الرام الفوري
 function sendFiles() {
-    if (ALL_SELECTED_FILES.length < 1 || ALL_SELECTED_FILES.length > MAX_FILES_COUNT) return;
+    const totalSize = selectedFiles.reduce((sum, file) => sum + file.size, 0);
+    const isCountValid = selectedFiles.length >= 1 && selectedFiles.length <= MAX_FILES_COUNT;
+    const isSizeValid = totalSize <= MAX_FILES_TOTAL_SIZE;
+
+    if (!currentRoomCode || !isCountValid || !isSizeValid) return;
 
     let uploadedCount = 0;
     const filesPayloadArray = [];
-    uploadBtn.style.display = 'none'; // حماية من النقرات المتعددة
+    uploadBtn.style.display = 'none';
 
-    ALL_SELECTED_FILES.forEach(file => {
+    selectedFiles.forEach((file) => {
         const reader = new FileReader();
-        reader.onload = function(e) {
+
+        reader.onload = (event) => {
             filesPayloadArray.push({
                 name: file.name,
-                bytes: e.target.result
+                bytes: event.target.result
             });
 
-            uploadedCount++;
-            if (uploadedCount === ALL_SELECTED_FILES.length) {
-                socket.emit('send-data', { 
-                    roomCode: currentRoomCode, 
-                    payload: { type: 'multiple-files', files: filesPayloadArray } 
+            uploadedCount += 1;
+            if (uploadedCount === selectedFiles.length) {
+                socket.emit('send-data', {
+                    roomCode: currentRoomCode,
+                    payload: { type: 'multiple-files', files: filesPayloadArray }
                 });
-                
-                // التطهير التام الفوري لإرجاع النظام فريش
-                ALL_SELECTED_FILES = []; 
-                fileInput.value = ''; 
+
+                selectedFiles = [];
+                fileInput.value = '';
                 updateFilesListUI();
             }
         };
+
+        reader.onerror = () => {
+            fileError.textContent = `⚠️ Could not read ${file.name}. Please try again.`;
+            fileError.classList.remove('hidden');
+            updateFilesListUI();
+        };
+
         reader.readAsDataURL(file);
     });
 }
 
-// استقبال البيانات حياً
-socket.on('receive-data', (payload) => {
-    if (payload.type === 'text') {
-        clipboardArea.value = payload.value;
-    } else if (payload.type === 'multiple-files') {
-        let htmlContent = `<div class="download-box"><p style="margin:0 0 10px 0; color:#00adb5; font-weight:bold;">📦 Received Files (${payload.files.length} items):</p>`;
-        
-        payload.files.forEach((file, index) => {
-            htmlContent += `<div style="margin: 8px 0;">
-                <a href="${file.bytes}" download="${file.name}" style="color: #fff; text-decoration: underline; font-size:14px; display: inline-block;">⬇️ Download ${index + 1}. ${file.name}</a>
-            </div>`;
-        });
-        
-        htmlContent += `</div>`;
-        fileDownloadArea.innerHTML = htmlContent;
+function showReceivedFiles(files) {
+    const downloadBox = document.createElement('div');
+    const title = document.createElement('p');
+
+    downloadBox.className = 'download-box';
+    title.className = 'download-title';
+    title.textContent = `📦 Received Files (${files.length} items):`;
+    downloadBox.appendChild(title);
+
+    files.forEach((file, index) => {
+        const row = document.createElement('div');
+        const link = document.createElement('a');
+
+        row.className = 'download-row';
+        link.href = file.bytes;
+        link.download = file.name;
+        link.textContent = `⬇️ Download ${index + 1}. ${file.name}`;
+
+        row.appendChild(link);
+        downloadBox.appendChild(row);
+    });
+
+    fileDownloadArea.textContent = '';
+    fileDownloadArea.appendChild(downloadBox);
+}
+
+function destroyRoom() {
+    if (currentRoomCode) socket.emit('destroy-room', currentRoomCode);
+}
+
+fileInput.addEventListener('change', handleInstantFileSelection);
+
+dropZone.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        fileInput.click();
     }
 });
 
-function destroyRoom() { if(currentRoomCode) socket.emit('destroy-room', currentRoomCode); }
-socket.on('room-destroyed', () => { alert('Room destroyed!'); window.location.reload(); });
+roomInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') joinRoom();
+});
+
+clipboardArea.addEventListener('input', () => {
+    const text = clipboardArea.value;
+
+    if (new Blob([text]).size > MAX_TEXT_SIZE) {
+        textError.classList.remove('hidden');
+        return;
+    }
+
+    textError.classList.add('hidden');
+
+    if (currentRoomCode) {
+        socket.emit('send-data', {
+            roomCode: currentRoomCode,
+            payload: { type: 'text', value: text }
+        });
+    }
+});
+
+socket.on('room-created', (code) => {
+    currentRoomCode = code;
+    displayCode.textContent = code;
+    switchToShareScreen();
+});
+
+socket.on('joined-success', (code) => {
+    currentRoomCode = code;
+    displayCode.textContent = code;
+    switchToShareScreen();
+});
+
+socket.on('receive-data', (payload) => {
+    if (!payload || typeof payload !== 'object') return;
+
+    if (payload.type === 'text') {
+        clipboardArea.value = payload.value || '';
+    } else if (payload.type === 'multiple-files' && Array.isArray(payload.files)) {
+        showReceivedFiles(payload.files);
+    }
+});
+
+socket.on('room-destroyed', () => {
+    alert('Room destroyed!');
+    window.location.reload();
+});
+
 socket.on('error-msg', (msg) => alert(msg));
