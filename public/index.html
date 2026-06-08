@@ -198,30 +198,30 @@
         .file-item span:first-child {
             flex: 1 1 auto;
             min-width: 0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            overflow-wrap: normal;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
 
         .file-item:last-child { border-bottom: 0; }
 
         .remove-file-button {
-            min-width: 78px;
+            width: 36px;
             min-height: 36px;
             margin: 0;
-            padding: 6px 10px;
-            background: rgba(255, 46, 99, 0.12);
-            color: #ff8aa8;
+            padding: 0;
+            background: transparent;
+            color: #ff2e63;
             flex: 0 0 auto;
-            font-size: 13px;
-            font-weight: 700;
-            border-radius: 999px;
+            font-size: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .remove-file-button:hover {
-            background: rgba(255, 46, 99, 0.22);
-            color: #fff;
+            background: rgba(255, 46, 99, 0.12);
+            border-radius: 6px;
         }
 
         .error-msg {
@@ -317,9 +317,9 @@
                 gap: 10px;
             }
             .file-item span:first-child {
-                white-space: nowrap;
-                overflow: hidden;
-                text-overflow: ellipsis;
+                white-space: normal;
+                overflow-wrap: anywhere;
+                word-break: break-word;
             }
         }
     </style>

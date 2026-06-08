@@ -127,7 +127,7 @@ function updateFilesListUI() {
 
         removeButton.type = 'button';
         removeButton.className = 'remove-file-button';
-        removeButton.textContent = '✕ Remove';
+        removeButton.textContent = '✕';
         removeButton.title = `Remove ${file.name}`;
         removeButton.setAttribute('aria-label', `Remove ${file.name}`);
         removeButton.addEventListener('click', (event) => {
