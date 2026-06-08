@@ -43,10 +43,18 @@ function switchToShareScreen() {
 }
 
 async function handleInstantFileSelection() {
-    const selected = Array.from(fileInput.files || []);
+    const entryList = Array.from(fileInput.webkitEntries || []);
 
-    if (selected.length > 0) {
-        addFilesToQueue(selected);
+    if (entryList.length > 0) {
+        const collectedFiles = await collectFilesFromEntries(entryList);
+        if (collectedFiles.length > 0) {
+            addFilesToQueue(collectedFiles);
+        }
+    } else {
+        const selected = Array.from(fileInput.files || []);
+        if (selected.length > 0) {
+            addFilesToQueue(selected);
+        }
     }
 
     fileInput.value = '';
