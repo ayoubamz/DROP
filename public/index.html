@@ -202,17 +202,22 @@
         .file-item:last-child { border-bottom: 0; }
 
         .remove-file-button {
-            width: 36px;
+            min-width: 78px;
             min-height: 36px;
             margin: 0;
-            padding: 0;
-            background: transparent;
-            color: #ff2e63;
+            padding: 6px 10px;
+            background: rgba(255, 46, 99, 0.12);
+            color: #ff8aa8;
             flex: 0 0 auto;
-            font-size: 18px;
+            font-size: 13px;
+            font-weight: 700;
+            border-radius: 999px;
         }
 
-        .remove-file-button:hover { background: rgba(255, 46, 99, 0.12); }
+        .remove-file-button:hover {
+            background: rgba(255, 46, 99, 0.22);
+            color: #fff;
+        }
 
         .error-msg {
             color: #ff2e63;
