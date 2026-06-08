@@ -255,7 +255,7 @@ function sendFiles() {
     });
 }
 
-function showReceivedFiles(files) {
+async function showReceivedFiles(files) {
     const downloadBox = document.createElement('div');
     const title = document.createElement('p');
 
@@ -264,18 +264,31 @@ function showReceivedFiles(files) {
     title.textContent = `📦 Received Files (${files.length} items):`;
     downloadBox.appendChild(title);
 
-    files.forEach((file, index) => {
+    for (const [index, file] of files.entries()) {
         const row = document.createElement('div');
         const link = document.createElement('a');
 
         row.className = 'download-row';
-        link.href = file.bytes;
-        link.download = file.name;
-        link.textContent = `⬇️ Download ${index + 1}. ${file.name}`;
+        link.rel = 'noopener noreferrer';
+        link.download = file.name || `download-${index + 1}`;
+        link.textContent = `⬇️ Download ${index + 1}. ${file.name || 'file'}`;
+
+        try {
+            const blob = await fetch(file.bytes).then((response) => response.blob());
+            const objectUrl = URL.createObjectURL(blob);
+            link.href = objectUrl;
+
+            link.addEventListener('click', () => {
+                setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+            }, { once: true });
+        } catch (error) {
+            link.href = file.bytes || '';
+            link.title = 'Download may be unavailable in this browser';
+        }
 
         row.appendChild(link);
         downloadBox.appendChild(row);
-    });
+    }
 
     fileDownloadArea.textContent = '';
     fileDownloadArea.appendChild(downloadBox);
