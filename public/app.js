@@ -118,7 +118,6 @@ async function collectFilesFromItems(items) {
     return collectedFiles;
 }
 
-
 function setupDragAndDrop() {
     if (!dropZone || dragAndDropReady) return;
 
