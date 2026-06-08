@@ -42,14 +42,61 @@ function switchToShareScreen() {
     setupDragAndDrop();
 }
 
-async function handleInstantFileSelection() {
-    const selected = Array.from(fileInput.files || []);
+async function handleInstantFileSelection(event) {
+    const entryList = Array.from(event.target.webkitEntries || []);
 
-    if (selected.length > 0) {
-        addFilesToQueue(selected);
+    if (entryList.length > 0) {
+        const collectedFiles = await collectFilesFromEntries(entryList);
+        if (collectedFiles.length > 0) {
+            addFilesToQueue(collectedFiles);
+        }
+    } else {
+        const selected = Array.from(fileInput.files || []);
+        if (selected.length > 0) {
+            addFilesToQueue(selected);
+        }
     }
 
     fileInput.value = '';
+}
+
+function readDirectoryEntries(directoryEntry) {
+    return new Promise((resolve, reject) => {
+        const reader = directoryEntry.createReader();
+        reader.readEntries((entries) => resolve(entries), reject);
+    });
+}
+
+function readEntryAsFile(entry) {
+    return new Promise((resolve, reject) => {
+        entry.file((file) => resolve(file), reject);
+    });
+}
+
+async function collectFilesFromEntries(entries) {
+    const collectedFiles = [];
+
+    for (const entry of entries) {
+        if (entry.isFile) {
+            collectedFiles.push(await readEntryAsFile(entry));
+            continue;
+        }
+
+        if (entry.isDirectory) {
+            const childEntries = await readDirectoryEntries(entry);
+            collectedFiles.push(...await collectFilesFromEntries(childEntries));
+        }
+    }
+
+    return collectedFiles;
+}
+
+async function collectFilesFromItems(items) {
+    const entries = Array.from(items || [])
+        .map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry())
+        .filter(Boolean);
+
+    return collectFilesFromEntries(entries);
 }
 
 
@@ -74,9 +121,18 @@ function setupDragAndDrop() {
         });
     });
 
-    dropZone.addEventListener('drop', (event) => {
-        const files = event.dataTransfer && event.dataTransfer.files;
+    dropZone.addEventListener('drop', async (event) => {
+        const items = event.dataTransfer && event.dataTransfer.items;
 
+        if (items && items.length > 0) {
+            const files = await collectFilesFromItems(items);
+            if (files.length > 0) {
+                addFilesToQueue(files);
+            }
+            return;
+        }
+
+        const files = event.dataTransfer && event.dataTransfer.files;
         if (files && files.length > 0) {
             addFilesToQueue(Array.from(files));
         }
