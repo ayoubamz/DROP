@@ -43,19 +43,18 @@ function switchToShareScreen() {
 }
 
 async function handleInstantFileSelection(event) {
-    const entryList = Array.from((event.target && event.target.webkitEntries) || []);
-    const selected = Array.from((event.target && event.target.files) || fileInput.files || []);
-
-    let collectedFiles = [];
+    const entryList = Array.from(event.target.webkitEntries || []);
 
     if (entryList.length > 0) {
-        collectedFiles = await collectFilesFromEntries(entryList);
-    }
-
-    if (collectedFiles.length > 0) {
-        addFilesToQueue(collectedFiles);
-    } else if (selected.length > 0) {
-        addFilesToQueue(selected);
+        const collectedFiles = await collectFilesFromEntries(entryList);
+        if (collectedFiles.length > 0) {
+            addFilesToQueue(collectedFiles);
+        }
+    } else {
+        const selected = Array.from(fileInput.files || []);
+        if (selected.length > 0) {
+            addFilesToQueue(selected);
+        }
     }
 
     fileInput.value = '';
@@ -93,29 +92,11 @@ async function collectFilesFromEntries(entries) {
 }
 
 async function collectFilesFromItems(items) {
-    const collectedFiles = [];
+    const entries = Array.from(items || [])
+        .map((item) => item.webkitGetAsEntry && item.webkitGetAsEntry())
+        .filter(Boolean);
 
-    for (const item of Array.from(items || [])) {
-        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-        const file = item.getAsFile ? item.getAsFile() : null;
-
-        if (file instanceof File) {
-            collectedFiles.push(file);
-            continue;
-        }
-
-        if (entry && entry.isFile) {
-            collectedFiles.push(await readEntryAsFile(entry));
-            continue;
-        }
-
-        if (entry && entry.isDirectory) {
-            const childEntries = await readDirectoryEntries(entry);
-            collectedFiles.push(...await collectFilesFromEntries(childEntries));
-        }
-    }
-
-    return collectedFiles;
+    return collectFilesFromEntries(entries);
 }
 
 
