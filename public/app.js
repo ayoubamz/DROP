@@ -43,43 +43,61 @@ function switchToShareScreen() {
 }
 
 async function handleInstantFileSelection(event) {
-    const entryList = Array.from((event.target && event.target.webkitEntries) || []);
-    const selected = Array.from((event.target && event.target.files) || fileInput.files || []);
+    const input = event.target || fileInput;
+    const entryList = Array.from(input.webkitEntries || []);
+    const selectedFilesFromInput = Array.from(input.files || []);
 
     let collectedFiles = [];
 
     if (entryList.length > 0) {
         collectedFiles = await collectFilesFromEntries(entryList);
+    } else if (selectedFilesFromInput.length > 0) {
+        collectedFiles = selectedFilesFromInput;
     }
 
     if (collectedFiles.length > 0) {
         addFilesToQueue(collectedFiles);
-    } else if (selected.length > 0) {
-        addFilesToQueue(selected);
     }
 
-    fileInput.value = '';
+    if (fileInput) {
+        fileInput.value = '';
+    }
 }
 
 function readDirectoryEntries(directoryEntry) {
     return new Promise((resolve, reject) => {
+        if (!directoryEntry || typeof directoryEntry.createReader !== 'function') {
+            resolve([]);
+            return;
+        }
+
         const reader = directoryEntry.createReader();
-        reader.readEntries((entries) => resolve(entries), reject);
+        reader.readEntries((entries) => resolve(Array.from(entries || [])), reject);
     });
 }
 
 function readEntryAsFile(entry) {
     return new Promise((resolve, reject) => {
-        entry.file((file) => resolve(file), reject);
+        if (!entry || typeof entry.file !== 'function') {
+            resolve(null);
+            return;
+        }
+
+        entry.file((file) => resolve(file || null), reject);
     });
 }
 
 async function collectFilesFromEntries(entries) {
     const collectedFiles = [];
 
-    for (const entry of entries) {
+    for (const entry of Array.from(entries || [])) {
+        if (!entry) continue;
+
         if (entry.isFile) {
-            collectedFiles.push(await readEntryAsFile(entry));
+            const file = await readEntryAsFile(entry);
+            if (file instanceof File) {
+                collectedFiles.push(file);
+            }
             continue;
         }
 
@@ -96,16 +114,20 @@ async function collectFilesFromItems(items) {
     const collectedFiles = [];
 
     for (const item of Array.from(items || [])) {
-        const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
-        const file = item.getAsFile ? item.getAsFile() : null;
+        if (!item) continue;
 
+        const file = typeof item.getAsFile === 'function' ? item.getAsFile() : null;
         if (file instanceof File) {
             collectedFiles.push(file);
             continue;
         }
 
+        const entry = typeof item.webkitGetAsEntry === 'function' ? item.webkitGetAsEntry() : null;
         if (entry && entry.isFile) {
-            collectedFiles.push(await readEntryAsFile(entry));
+            const resolvedFile = await readEntryAsFile(entry);
+            if (resolvedFile instanceof File) {
+                collectedFiles.push(resolvedFile);
+            }
             continue;
         }
 
