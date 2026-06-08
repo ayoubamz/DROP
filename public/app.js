@@ -43,8 +43,10 @@ function switchToShareScreen() {
 }
 
 function handleInstantFileSelection() {
-    if (fileInput.files && fileInput.files.length > 0) {
-        addFilesToQueue(fileInput.files);
+    const selected = Array.from(fileInput.files || []);
+
+    if (selected.length > 0) {
+        addFilesToQueue(selected);
     }
 
     fileInput.value = '';
@@ -73,7 +75,10 @@ function setupDragAndDrop() {
 
     dropZone.addEventListener('drop', (event) => {
         const files = event.dataTransfer && event.dataTransfer.files;
-        if (files) addFilesToQueue(files);
+
+        if (files && files.length > 0) {
+            addFilesToQueue(Array.from(files));
+        }
     });
 }
 
